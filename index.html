@@ -4,7 +4,7 @@
 <title>Raygun Apartment Booking</title>
 <style>
  body{font-family:Arial,sans-serif;max-width:480px;margin:20px auto;padding:0 12px}
- h2,h3{color:#17365D} input,button{width:100%;padding:9px;margin-top:8px;box-sizing:border-box}
+ h2,h3{color:#17365D} input,select,button{width:100%;padding:9px;margin-top:8px;box-sizing:border-box}
  button{background:#17365D;color:#fff;border:0;cursor:pointer}
  #days{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
  .day{background:#D9EAD3;color:#000;border:2px solid transparent}
@@ -13,7 +13,10 @@
  #msg{margin-top:14px;font-weight:bold}
 </style></head><body>
 <h2>Raygun Service Apartment</h2>
-<h3>Pick a date</h3><div id="days">Loading…</div>
+
+<h3>Book a stay</h3>
+<select id="loc"><option value="">Select location…</option></select>
+<div id="days">Select a location to see available dates.</div>
 <input id="name" placeholder="Full name">
 <input id="email" type="email" placeholder="Email">
 <button onclick="book()">Confirm booking</button>
@@ -25,31 +28,62 @@
 <div id="msg"></div>
 
 <script>
-const API = 'PASTE_YOUR_EXEC_URL_HERE';
+const API = 'PASTE_YOUR_EXEC_URL_HERE';   // public /macros/s/.../exec link
 let chosen = '';
 const $ = id => document.getElementById(id);
+const say = (t, ok) => { $('msg').textContent = t; $('msg').style.color = ok === undefined ? '#333' : ok ? 'green' : 'red'; };
+const FAIL = 'Could not reach the booking server. Check the API link and that access is set to Anyone.';
 
-async function load() {
-  const list = await (await fetch(API)).json();
-  $('days').innerHTML = '';
-  list.forEach(d => {
-    const b = document.createElement('button');
-    b.className = 'day'; b.disabled = !d.available;
-    b.textContent = new Date(d.date + 'T00:00').toDateString();
-    b.onclick = () => { chosen = d.date; document.querySelectorAll('.day').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); };
-    $('days').appendChild(b);
-  });
+async function getJSON(url, opts) {
+  const r = await fetch(url, opts);
+  return await r.json();            // throws if Google returns a sign-in/error page
 }
+
+async function init() {
+  try {
+    const r = await getJSON(API);
+    r.locations.forEach(l => $('loc').add(new Option(l, l)));
+  } catch (e) { say(FAIL, false); }
+}
+
+async function loadDays() {
+  chosen = '';
+  if (!$('loc').value) { $('days').textContent = 'Select a location to see available dates.'; return; }
+  $('days').textContent = 'Loading…';
+  try {
+    const r = await getJSON(API + '?location=' + encodeURIComponent($('loc').value));
+    $('days').innerHTML = '';
+    r.days.forEach(d => {
+      const b = document.createElement('button');
+      b.className = 'day'; b.disabled = !d.available;
+      b.textContent = new Date(d.date + 'T00:00').toDateString();
+      b.onclick = () => {
+        chosen = d.date;
+        document.querySelectorAll('.day').forEach(x => x.classList.remove('sel'));
+        b.classList.add('sel');
+      };
+      $('days').appendChild(b);
+    });
+  } catch (e) { $('days').textContent = ''; say(FAIL, false); }
+}
+$('loc').onchange = loadDays;
+
 async function send(payload) {
-  $('msg').style.color = '#333'; $('msg').textContent = 'Processing…';
-  const r = await (await fetch(API, {method: 'POST', body: JSON.stringify(payload)})).json();
-  $('msg').textContent = r.message; $('msg').style.color = r.ok ? 'green' : 'red';
-  load();
+  say('Processing…');
+  try {
+    const r = await getJSON(API, {method: 'POST', body: JSON.stringify(payload)});
+    say(r.message, r.ok);
+    if (r.ok) loadDays();
+  } catch (e) { say(FAIL, false); }
 }
 function book() {
-  if (!chosen) { $('msg').textContent = 'Select a date first.'; return; }
-  send({action: 'book', date: chosen, name: $('name').value, email: $('email').value});
+  if (!$('loc').value) return say('Select a location first.', false);
+  if (!chosen) return say('Select a date first.', false);
+  send({action:'book', location:$('loc').value, date:chosen, name:$('name').value, email:$('email').value});
 }
-function cancel() { send({action: 'cancel', ref: $('cref').value, email: $('cemail').value}); }
-load();
+function cancel() {
+  send({action:'cancel', ref:$('cref').value, email:$('cemail').value});
+  setTimeout(loadDays, 2500);
+}
+init();
 </script></body></html>
