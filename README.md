@@ -93,7 +93,7 @@ The `Bookings` tab is created automatically on first use.
 Set `SITE` in `Code.gs` to your published Pages address, with the trailing slash:
 
 ```javascript
-const SITE = 'https://<username>.github.io/<repository>/';
+const SITE = '[https://<username>.github.io/<repository>/](https://hillaryirungu.github.io/raygun-stay/)';
 ```
 
 ## Configuration
