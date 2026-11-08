@@ -6,20 +6,22 @@
  body{font-family:Arial,sans-serif;max-width:480px;margin:20px auto;padding:0 12px}
  h2,h3{color:#17365D} input,select,button{width:100%;padding:9px;margin-top:8px;box-sizing:border-box}
  button{background:#17365D;color:#fff;border:0;cursor:pointer}
+ button:disabled{opacity:.6;cursor:not-allowed}
  #days{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
  .day{background:#D9EAD3;color:#000;border:2px solid transparent}
- .day.sel{border-color:#17365D;font-weight:bold}
- .day:disabled{background:#eee;color:#999;text-decoration:line-through;cursor:not-allowed}
+ .day.sel{background:#17365D;color:#fff;font-weight:bold}
+ .day:disabled{background:#eee;color:#999;text-decoration:line-through}
  #msg{margin-top:14px;font-weight:bold}
 </style></head><body>
 <h2>Raygun Service Apartment</h2>
 
 <h3>Book a stay</h3>
 <select id="loc"><option value="">Select location…</option></select>
+<p style="margin:8px 0 0;color:#555">Tap one or more dates (tap again to unselect).</p>
 <div id="days">Select a location to see available dates.</div>
 <input id="name" placeholder="Full name">
 <input id="email" type="email" placeholder="Email">
-<button onclick="book()">Confirm booking</button>
+<button id="bk" onclick="book()">Confirm booking</button>
 
 <h3>Cancel a booking</h3>
 <input id="cref" placeholder="Booking reference">
@@ -29,38 +31,34 @@
 
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbxH2WeKG02DxwjBogFcsSerRkjOrmZGAgj_5d3giTm2En_-LZ2N1k91NN8BZa1__1hcMQ/exec';
-let chosen = '';
+const chosen = new Set();
 const $ = id => document.getElementById(id);
 const say = (t, ok) => { $('msg').textContent = t; $('msg').style.color = ok === undefined ? '#333' : ok ? 'green' : 'red'; };
 const FAIL = 'Could not reach the booking server. Check the API link and that access is set to Anyone.';
+const label = () => { $('bk').textContent = chosen.size ? 'Confirm booking (' + chosen.size + ' night' + (chosen.size > 1 ? 's' : '') + ')' : 'Confirm booking'; };
 
-async function getJSON(url, opts) {
-  const r = await fetch(url, opts);
-  return await r.json();            // throws if Google returns a sign-in/error page
-}
+async function getJSON(url, opts) { return await (await fetch(url, opts)).json(); }
 
 async function init() {
-  try {
-    const r = await getJSON(API);
-    r.locations.forEach(l => $('loc').add(new Option(l, l)));
-  } catch (e) { say(FAIL, false); }
+  try { (await getJSON(API)).locations.forEach(l => $('loc').add(new Option(l, l))); }
+  catch (e) { say(FAIL, false); }
 }
 
 async function loadDays() {
-  chosen = '';
+  chosen.clear(); label();
   if (!$('loc').value) { $('days').textContent = 'Select a location to see available dates.'; return; }
   $('days').textContent = 'Loading…';
   try {
-    const r = await getJSON(API + '?location=' + encodeURIComponent($('loc').value));
+    const r = await getJSON(API + '?location=' + encodeURIComponent($('loc').value) + '&t=' + Date.now());
     $('days').innerHTML = '';
     r.days.forEach(d => {
       const b = document.createElement('button');
       b.className = 'day'; b.disabled = !d.available;
       b.textContent = new Date(d.date + 'T00:00').toDateString();
       b.onclick = () => {
-        chosen = d.date;
-        document.querySelectorAll('.day').forEach(x => x.classList.remove('sel'));
-        b.classList.add('sel');
+        if (chosen.has(d.date)) { chosen.delete(d.date); b.classList.remove('sel'); }
+        else { chosen.add(d.date); b.classList.add('sel'); }
+        label();
       };
       $('days').appendChild(b);
     });
@@ -69,21 +67,22 @@ async function loadDays() {
 $('loc').onchange = loadDays;
 
 async function send(payload) {
-  say('Processing…');
+  say('Processing…'); $('bk').disabled = true;
   try {
     const r = await getJSON(API, {method: 'POST', body: JSON.stringify(payload)});
     say(r.message, r.ok);
     if (r.ok) loadDays();
   } catch (e) { say(FAIL, false); }
+  $('bk').disabled = false;
 }
 function book() {
   if (!$('loc').value) return say('Select a location first.', false);
-  if (!chosen) return say('Select a date first.', false);
-  send({action:'book', location:$('loc').value, date:chosen, name:$('name').value, email:$('email').value});
+  if (!chosen.size) return say('Select at least one date.', false);
+  send({action:'book', location:$('loc').value, dates:[...chosen].sort(), name:$('name').value, email:$('email').value});
 }
-function cancel() {
-  send({action:'cancel', ref:$('cref').value, email:$('cemail').value});
-  setTimeout(loadDays, 2500);
+async function cancel() {
+  await send({action:'cancel', ref:$('cref').value, email:$('cemail').value});
+  loadDays();
 }
 init();
 </script></body></html>
