@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Raygun Apartment Booking</title>
+<style>
+ body{font-family:Arial,sans-serif;max-width:480px;margin:20px auto;padding:0 12px}
+ h2,h3{color:#17365D} input,button{width:100%;padding:9px;margin-top:8px;box-sizing:border-box}
+ button{background:#17365D;color:#fff;border:0;cursor:pointer}
+ #days{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+ .day{background:#D9EAD3;color:#000;border:2px solid transparent}
+ .day.sel{border-color:#17365D;font-weight:bold}
+ .day:disabled{background:#eee;color:#999;text-decoration:line-through;cursor:not-allowed}
+ #msg{margin-top:14px;font-weight:bold}
+</style></head><body>
+<h2>Raygun Service Apartment</h2>
+<h3>Pick a date</h3><div id="days">Loading…</div>
+<input id="name" placeholder="Full name">
+<input id="email" type="email" placeholder="Email">
+<button onclick="book()">Confirm booking</button>
+
+<h3>Cancel a booking</h3>
+<input id="cref" placeholder="Booking reference">
+<input id="cemail" type="email" placeholder="Your email">
+<button onclick="cancel()">Cancel booking</button>
+<div id="msg"></div>
+
+<script>
+const API = 'PASTE_YOUR_EXEC_URL_HERE';
+let chosen = '';
+const $ = id => document.getElementById(id);
+
+async function load() {
+  const list = await (await fetch(API)).json();
+  $('days').innerHTML = '';
+  list.forEach(d => {
+    const b = document.createElement('button');
+    b.className = 'day'; b.disabled = !d.available;
+    b.textContent = new Date(d.date + 'T00:00').toDateString();
+    b.onclick = () => { chosen = d.date; document.querySelectorAll('.day').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); };
+    $('days').appendChild(b);
+  });
+}
+async function send(payload) {
+  $('msg').style.color = '#333'; $('msg').textContent = 'Processing…';
+  const r = await (await fetch(API, {method: 'POST', body: JSON.stringify(payload)})).json();
+  $('msg').textContent = r.message; $('msg').style.color = r.ok ? 'green' : 'red';
+  load();
+}
+function book() {
+  if (!chosen) { $('msg').textContent = 'Select a date first.'; return; }
+  send({action: 'book', date: chosen, name: $('name').value, email: $('email').value});
+}
+function cancel() { send({action: 'cancel', ref: $('cref').value, email: $('cemail').value}); }
+load();
+</script></body></html>
