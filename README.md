@@ -84,18 +84,6 @@ The `Bookings` tab is created automatically on first use.
 
 ### 2. Front end
 
-1. In `index.html`, set `API` to the `/exec` URL from the previous step.
-2. In the repository, go to **Settings → Pages**, choose branch `main` and folder `/ (root)`, and save.
-3. Open `https://<username>.github.io/<repository>/`.
-
-### 3. Email images
-
-Set `SITE` in `Code.gs` to your published Pages address, with the trailing slash:
-
-```javascript
-const SITE = '[https://<username>.github.io/<repository>/](https://hillaryirungu.github.io/raygun-stay/)';
-```
-
 ## Configuration
 
 All settings sit at the top of `Code.gs`:
