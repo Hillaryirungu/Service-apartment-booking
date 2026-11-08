@@ -7,13 +7,20 @@
  h2,h3{color:#17365D} input,select,button{width:100%;padding:9px;margin-top:8px;box-sizing:border-box}
  button{background:#17365D;color:#fff;border:0;cursor:pointer}
  button:disabled{opacity:.6;cursor:not-allowed}
+ .brand{text-align:center;padding:6px 0 0}
+ .brand img.logo{height:64px;max-width:80%}
+ .hero{width:100%;border-radius:10px;margin:12px 0 4px;display:block}
+ .tag{text-align:center;color:#0D4E76;margin:6px 0 0;font-size:14px}
  #days{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
  .day{background:#D9EAD3;color:#000;border:2px solid transparent}
  .day.sel{background:#17365D;color:#fff;font-weight:bold}
  .day:disabled{background:#eee;color:#999;text-decoration:line-through}
  #msg{margin-top:14px;font-weight:bold}
 </style></head><body>
-<h2>Raygun Service Apartment</h2>
+
+<div class="brand"><img class="logo" src="logo.png" alt="Raygun Security & Investigations"></div>
+<img class="hero" src="apartment-sketch.png" alt="Raygun service apartment sketch">
+<p class="tag">Pick your house, choose your nights, and your confirmation arrives by email.</p>
 
 <h3>Book a stay</h3>
 <select id="loc"><option value="">Select location…</option></select>
