@@ -28,12 +28,12 @@
 <div id="days">Select a location to see available dates.</div>
 <input id="name" placeholder="Full name">
 <input id="email" type="email" placeholder="Raygun email (name@raygun.co.ke)">
-<button id="bk" onclick="book()">Confirm booking</button>
+<button id="bk" type="button">Confirm booking</button>
 
 <h3>Cancel a booking</h3>
 <input id="cref" placeholder="Booking reference">
-<input id="email" type="email" placeholder="Raygun email (name@raygun.co.ke)">
-<button onclick="cancel()">Cancel booking</button>
+<input id="cemail" type="email" placeholder="Email used to book">
+<button id="cb" type="button">Cancel booking</button>
 <div id="msg"></div>
 
 <script>
@@ -60,7 +60,7 @@ async function loadDays() {
     $('days').innerHTML = '';
     r.days.forEach(d => {
       const b = document.createElement('button');
-      b.className = 'day'; b.disabled = !d.available;
+      b.type = 'button'; b.className = 'day'; b.disabled = !d.available;
       b.textContent = new Date(d.date + 'T00:00').toDateString();
       b.onclick = () => {
         if (chosen.has(d.date)) { chosen.delete(d.date); b.classList.remove('sel'); }
@@ -74,22 +74,28 @@ async function loadDays() {
 $('loc').onchange = loadDays;
 
 async function send(payload) {
-  say('Processing…'); $('bk').disabled = true;
+  say('Processing…'); $('bk').disabled = true; $('cb').disabled = true;
+  let ok = false;
   try {
     const r = await getJSON(API, {method: 'POST', body: JSON.stringify(payload)});
-    say(r.message, r.ok);
-    if (r.ok) loadDays();
+    say(r.message, r.ok); ok = r.ok;
   } catch (e) { say(FAIL, false); }
-  $('bk').disabled = false;
+  $('bk').disabled = false; $('cb').disabled = false;
+  if (ok) loadDays();
 }
-function book() {
+
+$('bk').addEventListener('click', () => {
   if (!$('loc').value) return say('Select a location first.', false);
   if (!chosen.size) return say('Select at least one date.', false);
-  send({action:'book', location:$('loc').value, dates:[...chosen].sort(), name:$('name').value, email:$('email').value});
-}
-async function cancel() {
-  await send({action:'cancel', ref:$('cref').value, email:$('cemail').value});
-  loadDays();
-}
+  if (!$('name').value.trim() || !$('email').value.trim()) return say('Enter your name and email.', false);
+  send({action:'book', location:$('loc').value, dates:[...chosen].sort(), name:$('name').value.trim(), email:$('email').value.trim()});
+});
+
+$('cb').addEventListener('click', () => {
+  const ref = $('cref').value.trim(), em = $('cemail').value.trim();
+  if (!ref || !em) return say('Enter your booking reference and email.', false);
+  send({action:'cancel', ref: ref, email: em});
+});
+
 init();
 </script></body></html>
